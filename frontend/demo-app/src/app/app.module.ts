@@ -1,5 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
-import { NgModule, } from '@angular/core';
+import { NgModule, Inject} from '@angular/core';
+import { ApmService } from '@elastic/apm-rum-angular';
+import { Router } from '@angular/router';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -10,17 +12,29 @@ import { CommonModule } from '@angular/common';
 import { IssueListComponent } from './components/issue-list.component';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    IssueListComponent
+  declarations: [AppComponent, IssueListComponent],
+  imports: [BrowserModule, CommonModule, AppRoutingModule, HttpClientModule],
+  providers: [
+    ApiService,
+    {
+      provide: ApmService,
+      useClass: ApmService,
+      deps: [Router],
+    },
   ],
-  imports: [
-    BrowserModule,
-    CommonModule,
-    AppRoutingModule,
-    HttpClientModule
-  ],
-  providers: [ApiService],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {
+  constructor(@Inject(ApmService) service: ApmService) {
+    // API is exposed through this apm instance
+    const apm = service.init({
+      serviceName: 'angular-app',
+      serverUrl: 'http://localhost:8200',
+    });
+
+    apm.setUserContext({
+      username: 'foo',
+      id: 'bar',
+    });
+  }
+}
